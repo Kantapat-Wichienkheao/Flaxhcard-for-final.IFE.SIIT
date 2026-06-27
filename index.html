@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English Vocabulary Flashcards</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card-bg:#fff; --text:#1f2433; --accent:#4f63d2;
+    --muted:#6b7280; --border:#e3e6ef; --shadow:0 8px 24px rgba(31,36,51,0.08);
+  }
+  [data-theme="dark"]{
+    --bg:#15161d; --card-bg:#1f212b; --text:#eef0f6;
+    --muted:#9aa1b5; --border:#2c2f3a; --shadow:0 8px 24px rgba(0,0,0,0.4);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--text); transition:background .3s,color .3s;
+    min-height:100vh;
+  }
+  .app{max-width:760px;margin:0 auto;padding:16px 16px 60px;}
+  header{
+    display:flex; justify-content:space-between; align-items:center; padding:8px 0 16px;
+    flex-wrap:wrap; gap:10px;
+  }
+  h1{font-size:1.3rem;margin:0;}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  button{
+    border:none; border-radius:10px; padding:8px 14px; cursor:pointer; font-size:0.85rem;
+    background:var(--accent); color:#fff; transition:transform .15s, opacity .15s;
+  }
+  button:hover{opacity:0.9;}
+  button:active{transform:scale(0.96);}
+  button.ghost{
+    background:transparent; color:var(--text); border:1px solid var(--border);
+  }
+  input[type="text"]{
+    padding:8px 12px; border-radius:10px; border:1px solid var(--border);
+    background:var(--card-bg); color:var(--text); font-size:0.85rem; width:160px;
+  }
+  .chapter-bar{
+    display:flex; gap:6px; overflow-x:auto; padding:6px 0 14px; -ms-overflow-style:none;
+  }
+  .chapter-bar::-webkit-scrollbar{display:none;}
+  .chip{
+    flex:0 0 auto; padding:7px 12px; border-radius:20px; border:1px solid var(--border);
+    background:var(--card-bg); color:var(--muted); font-size:0.78rem; cursor:pointer; white-space:nowrap;
+  }
+  .chip.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .progress-wrap{margin-bottom:10px;}
+  .progress-bar{height:6px; background:var(--border); border-radius:6px; overflow:hidden;}
+  .progress-fill{height:100%; background:var(--accent); transition:width .3s;}
+  .progress-text{font-size:0.75rem; color:var(--muted); margin-top:4px; text-align:right;}
+ 
+  .card-stage{
+    perspective:1500px; height:300px; margin:10px 0 18px; position:relative;
+  }
+  .flashcard{
+    width:100%; height:100%; position:relative; transform-style:preserve-3d;
+    transition:transform .5s cubic-bezier(.4,.2,.2,1); cursor:pointer;
+  }
+  .flashcard.flipped{transform:rotateY(180deg);}
+  .face{
+    position:absolute; inset:0; backface-visibility:hidden; border-radius:18px;
+    background:var(--card-bg); box-shadow:var(--shadow); border:1px solid var(--border);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px; text-align:center;
+  }
+  .face.back{transform:rotateY(180deg);}
+  .pos-tag{
+    font-size:0.72rem; letter-spacing:.05em; text-transform:uppercase; color:var(--accent);
+    background:rgba(79,99,210,0.1); padding:3px 10px; border-radius:20px; margin-bottom:14px;
+  }
+  .word{font-size:1.8rem; font-weight:700;}
+  .chapter-tag{
+    position:absolute; top:14px; left:18px; font-size:0.7rem; color:var(--muted);
+  }
+  .hint{position:absolute; bottom:14px; font-size:0.7rem; color:var(--muted);}
+  .thai{font-size:1.4rem; font-weight:600; margin-bottom:10px;}
+  .english-def{font-size:0.95rem; color:var(--muted); max-width:90%;}
+ 
+  .nav-row{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .nav-row button{flex:1; padding:12px;}
+  .center-actions{display:flex; gap:8px;}
+ 
+  .word-list-toggle{margin-top:18px; text-align:center;}
+  .word-list{
+    display:none; margin-top:12px; max-height:260px; overflow-y:auto;
+    border:1px solid var(--border); border-radius:14px; padding:8px;
+  }
+  .word-list.open{display:block;}
+  .word-item{
+    padding:9px 10px; border-radius:8px; cursor:pointer; font-size:0.85rem;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .word-item:hover{background:rgba(79,99,210,0.08);}
+  .word-item.current{background:rgba(79,99,210,0.15); font-weight:600;}
+  .word-item .meta{color:var(--muted); font-size:0.75rem;}
+  .empty-msg{text-align:center; color:var(--muted); padding:40px 10px;}
+  footer{text-align:center; color:var(--muted); font-size:0.72rem; margin-top:24px;}
+  @media (max-width:480px){
+    .word{font-size:1.4rem;}
+    .card-stage{height:260px;}
+  }
+</style>
+</head>
+<body data-theme="light">
+<div class="app">
+  <header>
+    <h1>📚 Vocabulary Flashcards</h1>
+    <div class="controls">
+      <input type="text" id="searchBox" placeholder="Search word...">
+      <button class="ghost" id="themeToggle">🌙 Dark</button>
+    </div>
+  </header>
+ 
+  <div class="chapter-bar" id="chapterBar"></div>
+ 
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressText"></div>
+  </div>
+ 
+  <div id="cardArea">
+    <div class="card-stage">
+      <div class="flashcard" id="flashcard">
+        <div class="face front">
+          <span class="chapter-tag" id="chapterTagFront"></span>
+          <div class="word" id="wordFront"></div>
+          <span class="pos-tag" id="posTag"></span>
+          <span class="hint">Click to flip ↻</span>
+        </div>
+        <div class="face back">
+          <span class="chapter-tag" id="chapterTagBack"></span>
+          <div class="thai" id="thaiMeaning"></div>
+          <div class="english-def" id="englishDef"></div>
+          <span class="hint">Click to flip ↻</span>
+        </div>
+      </div>
+    </div>
+ 
+    <div class="nav-row">
+      <button class="ghost" id="prevBtn">← Prev</button>
+      <div class="center-actions">
+        <button class="ghost" id="shuffleBtn">🔀 Shuffle</button>
+        <button class="ghost" id="flipBtn">↻ Flip</button>
+      </div>
+      <button class="ghost" id="nextBtn">Next →</button>
+    </div>
+ 
+    <div class="word-list-toggle">
+      <button class="ghost" id="listToggleBtn">📋 Show Word List</button>
+    </div>
+    <div class="word-list" id="wordList"></div>
+  </div>
+ 
+  <div id="emptyState" class="empty-msg" style="display:none;">No matching words found.</div>
+ 
+  <footer>Keyboard: ← → navigate · Space/Enter flip · S shuffle</footer>
+</div>
+ 
+<script>
+const vocab = [
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"anxiety", pos:"noun", thai:"ความวิตกกังวล", en:"A feeling of worry or fear"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"cable", pos:"noun", thai:"สายเคเบิล, สายไฟฟ้า", en:"A thick wire used for electricity or communication"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"citizen", pos:"noun", thai:"พลเมือง, ประชาชน", en:"A person who legally belongs to a country"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"concerned", pos:"adjective", thai:"กังวล, เป็นห่วง", en:"Worried about something"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"contrast", pos:"noun/verb", thai:"ความแตกต่าง, ตรงกันข้าม", en:"A clear difference between two things"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"custom", pos:"noun", thai:"ประเพณี, ธรรมเนียม", en:"A traditional way of doing something in a society"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"depressed", pos:"adjective", thai:"หดหู่, ซึมเศร้า", en:"Feeling very sad for a long time"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"embarrassed", pos:"adjective", thai:"อับอาย, เขินอาย", en:"Feeling shy or shameful about something"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"enable", pos:"verb", thai:"ทำให้สามารถทำได้", en:"To make it possible for someone to do something"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"fascinating", pos:"adjective", thai:"น่าสนใจมาก, น่าหลงใหล", en:"Very interesting and attractive"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"harm", pos:"noun/verb", thai:"อันตราย, ทำร้าย", en:"Damage or injury to someone or something"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"knowledge", pos:"noun", thai:"ความรู้", en:"Information and understanding about something"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"manage", pos:"verb", thai:"จัดการ, บริหาร", en:"To control or be in charge of something"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"organize", pos:"verb", thai:"จัดการ, จัดระเบียบ", en:"To arrange things in a planned order"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"recognize", pos:"verb", thai:"จดจำได้, รู้จัก", en:"To know someone or something that you have seen before"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"remote", pos:"adjective", thai:"ห่างไกล, ทางไกล", en:"Far away from cities or other places"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"routine", pos:"noun", thai:"กิจวัตรประจำวัน", en:"A regular way of doing things in order"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"surprising", pos:"adjective", thai:"น่าประหลาดใจ", en:"Causing surprise; unexpected"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"technique", pos:"noun", thai:"เทคนิค, วิธีการ", en:"A special way of doing something skillfully"},
+  {ch:6, chName:"Trends in Education", color:"#4f63d2", word:"widespread", pos:"adjective", thai:"แพร่หลาย, กว้างขวาง", en:"Found or happening in many places"},
+ 
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"appropriate", pos:"adjective", thai:"เหมาะสม", en:"Suitable or correct for a situation"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"block", pos:"verb/noun", thai:"ขัดขวาง, ปิดกั้น", en:"To stop something from passing through"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"climate", pos:"noun", thai:"สภาพภูมิอากาศ", en:"The usual weather conditions of a place"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"coast", pos:"noun", thai:"ชายฝั่ง", en:"Land next to the sea"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"collide", pos:"verb", thai:"ชนกัน, ปะทะกัน", en:"To crash into something with force"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"conditions", pos:"noun", thai:"สภาวะ, สภาพแวดล้อม", en:"The situation or circumstances in which something happens"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"data", pos:"noun", thai:"ข้อมูล", en:"Facts or information used for analysis"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"destroy", pos:"verb", thai:"ทำลาย", en:"To damage something so badly it cannot be used"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"dig", pos:"verb", thai:"ขุด", en:"To make a hole in the ground"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"extend", pos:"verb", thai:"ขยาย, ยืดออก", en:"To make something longer or larger"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"frequent", pos:"adjective", thai:"บ่อยครั้ง", en:"Happening often"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"fuel", pos:"noun", thai:"เชื้อเพลิง", en:"Material burned to produce energy, like gas or oil"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"occur", pos:"verb", thai:"เกิดขึ้น", en:"To happen"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"on purpose", pos:"phrase", thai:"โดยตั้งใจ", en:"Done intentionally, not by accident"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"on record", pos:"phrase", thai:"เท่าที่มีการบันทึกไว้", en:"Officially noted or measured in history"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"particularly", pos:"adverb", thai:"โดยเฉพาะ", en:"Especially; more than usual"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"significant", pos:"adjective", thai:"มีความสำคัญ", en:"Important enough to be noticed"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"strike", pos:"verb", thai:"กระทบ, โจมตี", en:"To hit something forcefully"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"threaten", pos:"verb", thai:"ขู่, เป็นภัยต่อ", en:"To say or show that you may cause harm"},
+  {ch:7, chName:"Nature's Fury", color:"#d2664f", word:"violent", pos:"adjective", thai:"รุนแรง", en:"Using or involving strong, harmful force"},
+ 
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"ancient", pos:"adjective", thai:"โบราณ", en:"Very old; from a long time ago"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"archeologist", pos:"noun", thai:"นักโบราณคดี", en:"A person who studies old objects and ruins"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"architect", pos:"noun", thai:"สถาปนิก", en:"A person who designs buildings"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"committed to", pos:"phrase", thai:"ทุ่มเทให้กับ", en:"Dedicated or loyal to a goal or task"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"consist of", pos:"phrase", thai:"ประกอบด้วย", en:"To be made up of certain parts"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"construct", pos:"verb", thai:"สร้าง, ก่อสร้าง", en:"To build something"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"debate", pos:"noun/verb", thai:"การโต้แย้ง, อภิปราย", en:"A discussion where people share different opinions"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"holy", pos:"adjective", thai:"ศักดิ์สิทธิ์", en:"Connected to God or religion; sacred"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"illustrate", pos:"verb", thai:"แสดงให้เห็น, ยกตัวอย่าง", en:"To explain or show clearly, often with examples or pictures"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"inspiration", pos:"noun", thai:"แรงบันดาลใจ", en:"Something that gives you ideas or motivation to create"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"religious", pos:"adjective", thai:"ทางศาสนา", en:"Related to religion or belief in God"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"represent", pos:"verb", thai:"เป็นตัวแทน, แสดงถึง", en:"To stand for or show something"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"require", pos:"verb", thai:"ต้องการ, จำเป็นต้องมี", en:"To need something"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"sculpture", pos:"noun", thai:"รูปปั้น, งานแกะสลัก", en:"A piece of art made by carving or shaping material"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"structure", pos:"noun", thai:"โครงสร้าง", en:"The way something is built or organized"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"style", pos:"noun", thai:"แบบ, สไตล์", en:"A particular way something looks or is done"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"symbol", pos:"noun", thai:"สัญลักษณ์", en:"Something that represents an idea or thing"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"temple", pos:"noun", thai:"วัด, เทวสถาน", en:"A building used for religious worship"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"theme", pos:"noun", thai:"แนวคิดหลัก, ธีม", en:"The main idea or subject of something"},
+  {ch:8, chName:"Building Wonders", color:"#4fb088", word:"transport", pos:"verb/noun", thai:"ขนส่ง, การขนส่ง", en:"To carry people or things from one place to another"},
+ 
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"absorb", pos:"verb", thai:"ดูดซับ", en:"To take in liquid, energy, or information"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"adjust", pos:"verb", thai:"ปรับ, ปรับตัว", en:"To change something slightly to make it fit better"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"advantage", pos:"noun", thai:"ข้อได้เปรียบ", en:"Something that helps you succeed or benefit"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"attract", pos:"verb", thai:"ดึงดูด", en:"To make someone or something interested or come closer"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"characteristic", pos:"noun", thai:"ลักษณะเฉพาะ", en:"A typical feature of someone or something"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"clue", pos:"noun", thai:"เบาะแส", en:"A piece of information that helps solve a problem"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"display", pos:"verb/noun", thai:"แสดง, จัดแสดง", en:"To show something so people can see it"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"evidence", pos:"noun", thai:"หลักฐาน", en:"Facts that prove something is true"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"evolve", pos:"verb", thai:"พัฒนา, วิวัฒนาการ", en:"To develop gradually over time"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"flexible", pos:"adjective", thai:"ยืดหยุ่น", en:"Able to bend or change easily"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"industry", pos:"noun", thai:"อุตสาหกรรม", en:"A type of business that produces goods or services"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"involved", pos:"adjective", thai:"ที่เกี่ยวข้อง", en:"Taking part in something"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"layer", pos:"noun", thai:"ชั้น", en:"One level of material on top of another"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"process", pos:"noun", thai:"กระบวนการ", en:"A series of steps to achieve a result"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"solid", pos:"adjective", thai:"แข็ง, เป็นของแข็ง", en:"Firm and hard, not liquid or gas"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"surface", pos:"noun", thai:"พื้นผิว", en:"The outer or top part of something"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"theory", pos:"noun", thai:"ทฤษฎี", en:"An idea that explains how or why something happens"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"uniquely", pos:"adverb", thai:"อย่างมีเอกลักษณ์", en:"In a way that is special or one-of-a-kind"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"vary", pos:"verb", thai:"แตกต่างกัน", en:"To be different or change"},
+  {ch:9, chName:"Form and Function", color:"#a04fb0", word:"warn", pos:"verb", thai:"เตือน", en:"To tell someone about a possible danger"},
+ 
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"abroad", pos:"adverb", thai:"ต่างประเทศ", en:"In or to a foreign country"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"career", pos:"noun", thai:"อาชีพ", en:"A job or profession over a long period of time"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"client", pos:"noun", thai:"ลูกค้า", en:"A person who pays for a service"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"comedy", pos:"noun", thai:"ตลก, ขำขัน", en:"A funny show, movie, or story"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"destination", pos:"noun", thai:"จุดหมายปลายทาง", en:"The place where someone is going"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"drawback", pos:"noun", thai:"ข้อเสีย", en:"A disadvantage of something"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"edit", pos:"verb", thai:"แก้ไข, ตัดต่อ", en:"To change or correct a piece of writing or media"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"employ", pos:"verb", thai:"จ้างงาน", en:"To give someone a paid job"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"experiment", pos:"noun/verb", thai:"การทดลอง, ทดลอง", en:"A test done to learn something new"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"explode", pos:"verb", thai:"ระเบิด", en:"To burst suddenly and violently"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"imagination", pos:"noun", thai:"จินตนาการ", en:"The ability to create ideas or pictures in your mind"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"local", pos:"adjective", thai:"ท้องถิ่น", en:"Belonging to a particular area or place"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"ordinary", pos:"adjective", thai:"ธรรมดา, ปกติ", en:"Normal and not special"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"population", pos:"noun", thai:"ประชากร", en:"The number of people living in a place"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"reliable", pos:"adjective", thai:"น่าเชื่อถือ", en:"Able to be trusted to work or behave well"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"role", pos:"noun", thai:"บทบาท", en:"The part someone plays in a situation"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"security", pos:"noun", thai:"ความปลอดภัย", en:"Protection from danger or risk"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"sensitive", pos:"adjective", thai:"อ่อนไหว, บอบบาง", en:"Easily affected or emotionally reactive"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"sketch", pos:"noun/verb", thai:"ภาพร่าง, วาดร่าง", en:"A simple, quick drawing"},
+  {ch:10, chName:"Remaining Work", color:"#b08c4f", word:"visa", pos:"noun", thai:"วีซ่า", en:"An official document allowing entry to a country"},
+];
+ 
+let activeDeck = [...vocab];
+let currentIndex = 0;
+let activeChapter = "all";
+let isFlipped = false;
+ 
+const chapters = [...new Map(vocab.map(v => [v.ch, {ch:v.ch, name:v.chName, color:v.color}])).values()]
+  .sort((a,b) => a.ch - b.ch);
+ 
+const chapterBar = document.getElementById('chapterBar');
+const flashcard = document.getElementById('flashcard');
+const wordFront = document.getElementById('wordFront');
+const posTag = document.getElementById('posTag');
+const thaiMeaning = document.getElementById('thaiMeaning');
+const englishDef = document.getElementById('englishDef');
+const chapterTagFront = document.getElementById('chapterTagFront');
+const chapterTagBack = document.getElementById('chapterTagBack');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const wordList = document.getElementById('wordList');
+const cardArea = document.getElementById('cardArea');
+const emptyState = document.getElementById('emptyState');
+const searchBox = document.getElementById('searchBox');
+ 
+function renderChapterBar(){
+  let html = `<div class="chip ${activeChapter==='all'?'active':''}" data-ch="all">All (${vocab.length})</div>`;
+  chapters.forEach(c => {
+    const count = vocab.filter(v=>v.ch===c.ch).length;
+    html += `<div class="chip ${activeChapter===c.ch?'active':''}" data-ch="${c.ch}">Ch.${c.ch} ${c.name} (${count})</div>`;
+  });
+  chapterBar.innerHTML = html;
+  chapterBar.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const ch = chip.dataset.ch;
+      activeChapter = ch === 'all' ? 'all' : Number(ch);
+      filterDeck();
+    });
+  });
+}
+ 
+function filterDeck(){
+  const query = searchBox.value.trim().toLowerCase();
+  let deck = activeChapter === 'all' ? [...vocab] : vocab.filter(v => v.ch === activeChapter);
+  if(query){
+    deck = deck.filter(v => v.word.toLowerCase().includes(query) || v.thai.includes(query) || v.en.toLowerCase().includes(query));
+  }
+  activeDeck = deck;
+  currentIndex = 0;
+  isFlipped = false;
+  renderChapterBar();
+  renderCard();
+  renderWordList();
+}
+ 
+function renderCard(){
+  if(activeDeck.length === 0){
+    cardArea.style.display = 'none';
+    emptyState.style.display = 'block';
+    return;
+  }
+  cardArea.style.display = 'block';
+  emptyState.style.display = 'none';
+  const item = activeDeck[currentIndex];
+  flashcard.classList.remove('flipped');
+  isFlipped = false;
+  wordFront.textContent = item.word;
+  posTag.textContent = item.pos;
+  posTag.style.color = item.color;
+  posTag.style.background = item.color + '1a';
+  thaiMeaning.textContent = item.thai;
+  englishDef.textContent = item.en;
+  chapterTagFront.textContent = `Ch.${item.ch} · ${item.chName}`;
+  chapterTagBack.textContent = `Ch.${item.ch} · ${item.chName}`;
+  progressFill.style.width = `${((currentIndex+1)/activeDeck.length)*100}%`;
+  progressText.textContent = `${currentIndex+1} / ${activeDeck.length}`;
+  renderWordList();
+}
+ 
+function renderWordList(){
+  wordList.innerHTML = activeDeck.map((item, idx) => `
+    <div class="word-item ${idx===currentIndex?'current':''}" data-idx="${idx}">
+      <span>${item.word}</span>
+      <span class="meta">Ch.${item.ch} · ${item.pos}</span>
+    </div>
+  `).join('');
+  wordList.querySelectorAll('.word-item').forEach(el => {
+    el.addEventListener('click', () => {
+      currentIndex = Number(el.dataset.idx);
+      renderCard();
+    });
+  });
+}
+ 
+function flipCard(){
+  if(activeDeck.length === 0) return;
+  isFlipped = !isFlipped;
+  flashcard.classList.toggle('flipped', isFlipped);
+}
+ 
+function nextCard(){
+  if(activeDeck.length === 0) return;
+  currentIndex = (currentIndex + 1) % activeDeck.length;
+  renderCard();
+}
+ 
+function prevCard(){
+  if(activeDeck.length === 0) return;
+  currentIndex = (currentIndex - 1 + activeDeck.length) % activeDeck.length;
+  renderCard();
+}
+ 
+function shuffleDeck(){
+  for(let i = activeDeck.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i+1));
+    [activeDeck[i], activeDeck[j]] = [activeDeck[j], activeDeck[i]];
+  }
+  currentIndex = 0;
+  renderCard();
+}
+ 
+flashcard.addEventListener('click', flipCard);
+document.getElementById('flipBtn').addEventListener('click', flipCard);
+document.getElementById('nextBtn').addEventListener('click', nextCard);
+document.getElementById('prevBtn').addEventListener('click', prevCard);
+document.getElementById('shuffleBtn').addEventListener('click', shuffleDeck);
+searchBox.addEventListener('input', filterDeck);
+ 
+document.getElementById('listToggleBtn').addEventListener('click', () => {
+  wordList.classList.toggle('open');
+  const btn = document.getElementById('listToggleBtn');
+  btn.textContent = wordList.classList.contains('open') ? '📋 Hide Word List' : '📋 Show Word List';
+});
+ 
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const body = document.body;
+  const isDark = body.getAttribute('data-theme') === 'dark';
+  body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('themeToggle').textContent = isDark ? '🌙 Dark' : '☀️ Light';
+});
+ 
+document.addEventListener('keydown', (e) => {
+  if(document.activeElement === searchBox) return;
+  if(e.key === 'ArrowRight') nextCard();
+  else if(e.key === 'ArrowLeft') prevCard();
+  else if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); flipCard(); }
+  else if(e.key.toLowerCase() === 's') shuffleDeck();
+});
+ 
+renderChapterBar();
+renderCard();
+</script>
+</body>
+</html>
